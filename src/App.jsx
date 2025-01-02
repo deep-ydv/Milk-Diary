@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 
 const MilkDiary = () => {
   const [milkPrices, setMilkPrices] = useState({ FCM: 34, CTM: 30 });
+  const [updatedMilkPrices, setUpdatedMilkPrices] = useState({ FCM: 34, CTM: 30 });
   const [currentMonth, setCurrentMonth] = useState("January");
   const [allMonths, setAllMonths] = useState(() => {
     const savedData = localStorage.getItem("milkDiaryData");
@@ -13,7 +14,6 @@ const MilkDiary = () => {
   const [previousBill, setPreviousBill] = useState({ total: 0, FCM: 0, CTM: 0 });
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Real-time date and time update
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentDate(new Date());
@@ -21,7 +21,6 @@ const MilkDiary = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Save data to localStorage whenever allMonths is updated
   useEffect(() => {
     localStorage.setItem("milkDiaryData", JSON.stringify(allMonths));
   }, [allMonths]);
@@ -33,7 +32,13 @@ const MilkDiary = () => {
   };
 
   const handleMilkPriceChange = (type, value) => {
-    setMilkPrices({ ...milkPrices, [type]: parseInt(value, 10) || 0 });
+    setUpdatedMilkPrices({ ...updatedMilkPrices, [type]: parseInt(value, 10) || 0 });
+  };
+
+  const submitMilkPrices = () => {
+    setMilkPrices(updatedMilkPrices);
+    calculateBill(currentMonth);
+    if (previousMonth) calculateBill(previousMonth);
   };
 
   const addOrder = () => {
@@ -46,7 +51,7 @@ const MilkDiary = () => {
     });
     setAllMonths({ ...allMonths, [currentMonth]: ordersForMonth });
     setCurrentOrders({ FCM: 0, CTM: 0 });
-    calculateBill(currentMonth); // Update current bill
+    calculateBill(currentMonth);
   };
 
   const handleKeyDown = (event) => {
@@ -61,7 +66,7 @@ const MilkDiary = () => {
       setAllMonths({ ...allMonths, [newMonth]: [] });
       setPreviousMonth(currentMonth);
       setCurrentMonth(newMonth);
-      calculateBill(currentMonth); // Calculate previous month's bill
+      calculateBill(currentMonth);
     }
   };
 
@@ -95,9 +100,7 @@ const MilkDiary = () => {
 
   useEffect(() => {
     calculateBill(currentMonth);
-    if (previousMonth) {
-      calculateBill(previousMonth);
-    }
+    if (previousMonth) calculateBill(previousMonth);
   }, [allMonths, milkPrices]);
 
   return (
@@ -109,24 +112,27 @@ const MilkDiary = () => {
         <h3>Milk Prices</h3>
         <div style={styles.priceContainer}>
           <label>
-            FCM:{" "}
+            Full Cream Milk (FCM):{" "}
             <input
               type="number"
-              value={milkPrices.FCM}
+              value={updatedMilkPrices.FCM}
               onChange={(e) => handleMilkPriceChange("FCM", e.target.value)}
               style={styles.input}
             />
           </label>
           <label>
-            CTM:{" "}
+            Cow Milk (CTM):{" "}
             <input
               type="number"
-              value={milkPrices.CTM}
+              value={updatedMilkPrices.CTM}
               onChange={(e) => handleMilkPriceChange("CTM", e.target.value)}
               style={styles.input}
             />
           </label>
         </div>
+        <button onClick={submitMilkPrices} style={styles.button}>
+          Submit Prices
+        </button>
       </div>
 
       {/* Month Section */}
@@ -161,7 +167,7 @@ const MilkDiary = () => {
         <h3>Date: {getFormattedDate(currentDate)}</h3>
         <div style={styles.orderContainer}>
           <label>
-            FCM:
+            Full Cream Milk (FCM):
             <input
               type="number"
               value={currentOrders.FCM}
@@ -173,7 +179,7 @@ const MilkDiary = () => {
             />
           </label>
           <label>
-            CTM:
+            Cow Milk (CTM):
             <input
               type="number"
               value={currentOrders.CTM}
@@ -190,16 +196,29 @@ const MilkDiary = () => {
         </button>
       </div>
 
-      {/* Orders and Bills */}
+      {/* Orders Table */}
       <div style={styles.section}>
         <h3>Orders for {currentMonth}</h3>
-        {allMonths[currentMonth]?.map((order, index) => (
-          <p key={index}>
-            {order.date}: {order.FCM} FCM, {order.CTM} CTM
-          </p>
-        ))}
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.tableHead}>Date</th>
+              <th style={styles.tableHead}>Full Cream Milk (FCM)</th>
+              <th style={styles.tableHead}>Cow Milk (CTM)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allMonths[currentMonth]?.map((order, index) => (
+              <tr key={index}>
+                <td style={styles.tableCell}>{order.date}</td>
+                <td style={styles.tableCell}>{order.FCM}</td>
+                <td style={styles.tableCell}>{order.CTM}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         <h4>
-          Current Month Bill: ₹{currentBill.total} (FCM: {currentBill.FCM}, CTM: {currentBill.CTM}, Total Milk:{" "}
+          Current Month Bill: ₹{currentBill.total} (FCM: {currentBill.FCM}, CTM: {currentBill.CTM}, Total Milk: {" "}
           {currentBill.FCM + currentBill.CTM})
         </h4>
       </div>
@@ -207,13 +226,26 @@ const MilkDiary = () => {
       {previousMonth && (
         <div style={styles.section}>
           <h3>Orders for {previousMonth}</h3>
-          {allMonths[previousMonth]?.map((order, index) => (
-            <p key={index}>
-              {order.date}: {order.FCM} FCM, {order.CTM} CTM
-            </p>
-          ))}
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.tableHead}>Date</th>
+                <th style={styles.tableHead}>Full Cream Milk (FCM)</th>
+                <th style={styles.tableHead}>Cow Milk (CTM)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allMonths[previousMonth]?.map((order, index) => (
+                <tr key={index}>
+                  <td style={styles.tableCell}>{order.date}</td>
+                  <td style={styles.tableCell}>{order.FCM}</td>
+                  <td style={styles.tableCell}>{order.CTM}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           <h4>
-            Previous Month Bill: ₹{previousBill.total} (FCM: {previousBill.FCM}, CTM: {previousBill.CTM}, Total Milk:{" "}
+            Previous Month Bill: ₹{previousBill.total} (FCM: {previousBill.FCM}, CTM: {previousBill.CTM}, Total Milk: {" "}
             {previousBill.FCM + previousBill.CTM})
           </h4>
         </div>
@@ -222,55 +254,71 @@ const MilkDiary = () => {
   );
 };
 
-// Styling remains the same
 const styles = {
   container: {
     padding: "20px",
-    border: "1px solid #ccc",
-    borderRadius: "10px",
-    width: "90%",
-    maxWidth: "500px",
-    margin: "10px auto",
     fontFamily: "Arial, sans-serif",
-    boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
-    backgroundColor: "#f9f9f9",
+    maxWidth: "100%",
+    margin: "0 auto",
+    boxSizing: "border-box",
   },
   title: {
     textAlign: "center",
-    marginBottom: "20px",
-    color: "#333",
   },
   section: {
     marginBottom: "20px",
+    padding: "15px",
+    backgroundColor: "#f9f9f9",
+    borderRadius: "8px",
+    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
   },
   priceContainer: {
     display: "flex",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    gap: "10px",
   },
   input: {
+    margin: "0 10px",
     padding: "5px",
-    marginLeft: "10px",
-    width: "60px",
+    borderRadius: "4px",
+    border: "1px solid #ccc",
   },
   button: {
+    marginTop: "10px",
     padding: "8px 12px",
-    margin: "10px 0",
-    backgroundColor: "#4CAF50",
-    color: "#fff",
     border: "none",
     borderRadius: "5px",
+    backgroundColor: "#007BFF",
+    color: "white",
     cursor: "pointer",
-    fontSize: "14px",
+    transition: "background-color 0.3s",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    marginTop: "10px",
+    tableLayout: "fixed",  // Ensures uniform column width
+  },
+  tableHead: {
+    backgroundColor: "#f2f2f2",
+    textAlign: "left",  // Align headers to the left
+    padding: "10px",  // Add padding for better readability
+  },
+  tableCell: {
+    padding: "10px",  // Add padding for better alignment
+    border: "1px solid #ddd",  // Border around each cell
+    textAlign: "center",  // Center text in cells
   },
   monthItem: {
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "5px",
+    justifyContent: "space-between",
+    margin: "5px 0",
   },
   orderContainer: {
     display: "flex",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    gap: "10px",
   },
 };
 
